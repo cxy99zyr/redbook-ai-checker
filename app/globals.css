@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 20% 98%;
+    --foreground: 240 6% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 6% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 10%;
+
+    --primary: 352 82% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 352 35% 95%;
+    --secondary-foreground: 352 50% 30%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 8% 46%;
+
+    --accent: 24 80% 95%;
+    --accent-foreground: 24 60% 30%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 60% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 352 82% 56%;
+    --radius: 0.75rem;
+
+    /* Custom design tokens */
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.05), 0 1px 2px -1px hsl(0 0% 0% / 0.05);
+    --shadow-card-hover: 0 10px 25px -5px hsl(352 82% 56% / 0.08), 0 8px 10px -6px hsl(352 82% 56% / 0.04);
+    --shadow-glow: 0 4px 14px 0 hsl(352 82% 56% / 0.25);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .hero-gradient {
+    background: linear-gradient(135deg, hsl(352, 82%, 56%) 0%, hsl(20, 85%, 58%) 100%);
+  }
+
+  .hero-gradient-subtle {
+    background: linear-gradient(
+      135deg,
+      hsl(352, 82%, 56%, 0.05) 0%,
+      hsl(20, 85%, 58%, 0.05) 100%
+    );
+  }
+
+  .param-tag {
+    @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors;
+  }
+
+  .param-tag-picture {
+    background: hsl(352, 82%, 56%, 0.08);
+    color: hsl(352, 82%, 56%);
+  }
+
+  .param-tag-sound {
+    background: hsl(220, 70%, 96%);
+    color: hsl(220, 60%, 40%);
+  }
+
+  .param-tag-smart {
+    background: hsl(270, 60%, 96%);
+    color: hsl(270, 50%, 40%);
+  }
+
+  .param-tag-other {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .input-base {
+    @apply flex w-full rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm transition-all
+      placeholder:text-muted-foreground
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:border-primary/40;
+  }
+
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.06) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+
+  .section-step {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold;
+  }
+}
