@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -17,6 +18,13 @@ import {
   POLISH_DIRECTIONS,
   type PolishDirectionKey,
 } from "@/lib/constants"
+import {
+  API_PROVIDERS,
+  API_CONFIG_KEY,
+  getModelsForEndpoint,
+  type ApiConfig,
+  type ProviderKey,
+} from "@/lib/api-providers"
 import {
   Settings,
   Upload,
@@ -37,6 +45,7 @@ import {
   ArrowRight,
   CornerDownRight,
   RefreshCw,
+  Shuffle,
 } from "lucide-react"
 
 /* ─── Types ─────────────────────────────────────────────── */
@@ -64,43 +73,6 @@ interface PolishedResult {
   polished_content: string
 }
 
-interface ApiConfig {
-  apiKey: string
-  endpoint: string
-  model: string
-}
-
-const API_CONFIG_KEY = "redbook-ai-config"
-
-const DEEPSEEK_MODELS = {
-  chat: {
-    name: "Chat",
-    model: "deepseek-chat",
-    description: "通用对话模型，适合大多数任务",
-  },
-  reasoner: {
-    name: "Reasoner",
-    model: "deepseek-reasoner",
-    description: "推理模型，适合复杂逻辑分析",
-  },
-} as const
-
-type DeepseekModelKey = keyof typeof DEEPSEEK_MODELS
-
-const API_PROVIDERS = {
-  openai: {
-    name: "OpenAI",
-    endpoint: "https://api.openai.com/v1/chat/completions",
-    model: "gpt-4o-mini",
-  },
-  deepseek: {
-    name: "DeepSeek",
-    endpoint: "https://api.deepseek.com/v1/chat/completions",
-    model: DEEPSEEK_MODELS.chat.model,
-  },
-} as const
-
-type ProviderKey = keyof typeof API_PROVIDERS
 const DEFAULT_PROVIDER: ProviderKey = "deepseek"
 
 /* ─── Main Component ────────────────────────────────────── */
@@ -483,13 +455,22 @@ export default function Home() {
                 上传产品参数 → 粘贴文案 → AI 自动校核参数错误
               </p>
             </div>
-            <button
-              onClick={() => setShowApiConfig((v) => !v)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-primary-foreground backdrop-blur-sm transition-colors hover:bg-white/25"
-              title="API 设置"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
+          <div className="flex items-center gap-2">
+              <Link
+                href="/style-transfer"
+                className="flex h-10 items-center gap-1.5 rounded-xl bg-white/15 px-4 text-sm font-medium text-primary-foreground backdrop-blur-sm transition-colors hover:bg-white/25"
+              >
+                <Shuffle className="h-4 w-4" />
+                <span className="hidden sm:inline">风格迁移</span>
+              </Link>
+              <button
+                onClick={() => setShowApiConfig((v) => !v)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-primary-foreground backdrop-blur-sm transition-colors hover:bg-white/25"
+                title="API 设置"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -549,7 +530,7 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="sm:col-span-1">
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     API 提供商
@@ -572,43 +553,56 @@ export default function Home() {
                     }}
                     className="input-base"
                   >
-                    <option value="deepseek">DeepSeek</option>
-                    <option value="openai">OpenAI</option>
+                    {Object.entries(API_PROVIDERS).map(([key, provider]) => (
+                      <option key={key} value={key}>
+                        {provider.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
-                {apiConfig.endpoint === API_PROVIDERS.deepseek.endpoint && (
-                  <div className="sm:col-span-1">
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      DeepSeek 模型
-                    </label>
-                    <select
-                      value={
-                        Object.keys(DEEPSEEK_MODELS).find(
-                          (k) =>
-                            DEEPSEEK_MODELS[k as DeepseekModelKey].model ===
-                            apiConfig.model
-                        ) || "chat"
+                <div className="sm:col-span-1">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    模型选择
+                  </label>
+                  <select
+                    value={
+                      getModelsForEndpoint(apiConfig.endpoint).some(
+                        (m) => m.id === apiConfig.model
+                      )
+                        ? apiConfig.model
+                        : "__custom__"
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === "__custom__") {
+                        saveConfig({ ...apiConfig, model: "" })
+                        return
                       }
-                      onChange={(e) => {
-                        const modelKey = e.target.value as DeepseekModelKey
-                        saveConfig({
-                          ...apiConfig,
-                          model: DEEPSEEK_MODELS[modelKey].model,
-                        })
-                      }}
-                      className="input-base"
-                    >
-                      <option value="chat">
-                        {DEEPSEEK_MODELS.chat.name} -{" "}
-                        {DEEPSEEK_MODELS.chat.description}
+                      saveConfig({ ...apiConfig, model: e.target.value })
+                    }}
+                    className="input-base"
+                  >
+                    {getModelsForEndpoint(apiConfig.endpoint).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}{m.description ? ` - ${m.description}` : ""}
                       </option>
-                      <option value="reasoner">
-                        {DEEPSEEK_MODELS.reasoner.name} -{" "}
-                        {DEEPSEEK_MODELS.reasoner.description}
-                      </option>
-                    </select>
-                  </div>
-                )}
+                    ))}
+                    <option value="__custom__">自定义模型...</option>
+                  </select>
+                  {!getModelsForEndpoint(apiConfig.endpoint).some(
+                    (m) => m.id === apiConfig.model
+                  ) && (
+                    <input
+                      type="text"
+                      value={apiConfig.model}
+                      onChange={(e) =>
+                        saveConfig({ ...apiConfig, model: e.target.value })
+                      }
+                      placeholder="请输入自定义模型名称，如 gpt-4o"
+                      className="input-base mt-2"
+                      autoFocus
+                    />
+                  )}
+                </div>
                 <div className="sm:col-span-1">
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     API Key
@@ -636,7 +630,7 @@ export default function Home() {
                     </button>
                   </div>
                 </div>
-                <div className="sm:col-span-1">
+                <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     API Endpoint
                   </label>
@@ -647,20 +641,6 @@ export default function Home() {
                       saveConfig({ ...apiConfig, endpoint: e.target.value })
                     }
                     placeholder={API_PROVIDERS.deepseek.endpoint}
-                    className="input-base"
-                  />
-                </div>
-                <div className="sm:col-span-1">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                    模型名称
-                  </label>
-                  <input
-                    type="text"
-                    value={apiConfig.model}
-                    onChange={(e) =>
-                      saveConfig({ ...apiConfig, model: e.target.value })
-                    }
-                    placeholder={API_PROVIDERS.deepseek.model}
                     className="input-base"
                   />
                 </div>
