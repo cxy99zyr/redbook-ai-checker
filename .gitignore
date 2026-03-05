@@ -32,3 +32,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sensitive files
+apikey.md
+
+# local deployment only
+server.js
+启动程序.bat
+start.command
+scripts/
+BUILD.md
+edgeone.json
+
+# qoder
+.qoder/
