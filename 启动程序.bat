@@ -1,71 +1,128 @@
 @echo off
-chcp 65001 >nul
-title 小红书电视文案参数校核助手
+chcp 936 >nul
+title RedBook AI Assistant
 
 echo.
 echo ========================================
-echo   小红书电视文案参数校核助手
-echo   AI 驱动 · 参数校核 · 文案润色
+echo   RedBook TV Copy AI Assistant
+echo   AI Powered Parameter Check and Polish
 echo ========================================
 echo.
 
 cd /d "%~dp0"
 
-:: 检查 Node.js
-where node >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [错误] 未检测到 Node.js，请先安装 Node.js 18+
-    echo 下载地址: https://nodejs.org/
+:: Check if running from temp/zip directory
+echo %cd% | findstr /i /c:"Temp" /c:"360zip" /c:"$Temp" /c:"7z" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [ERROR] Please extract the zip file first!
+    echo.
+    echo Current path: %cd%
+    echo.
+    echo This program is running from a temporary directory.
+    echo Please extract ALL files to a normal folder first,
+    echo for example: D:\redbook-ai
+    echo Then run this script from the extracted folder.
+    echo.
     pause
     exit /b 1
 )
 
-:: 检查 standalone 目录
-if not exist ".next\standalone\server.js" (
-    echo [提示] 首次运行，正在构建应用...
-    echo 这可能需要几分钟，请耐心等待...
+:: Check Node.js
+where node >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Node.js not found. Please install Node.js 18+
+    echo Download: https://nodejs.org/
     echo.
-    call npm install
-    call npm run build
-    call node scripts\prepare-standalone.js
+    pause
+    exit /b 1
 )
 
-echo 正在启动服务器，请稍候...
+for /f "tokens=*" %%v in ('node -v') do echo Node.js version: %%v
+
+:: Check standalone build
+if not exist ".next\standalone\server.js" (
+    echo.
+    echo [INFO] First run - building application...
+    echo This may take a few minutes, please wait...
+    echo.
+    
+    if not exist "node_modules" (
+        echo Installing dependencies...
+        call npm install
+        if %errorlevel% neq 0 (
+            echo [ERROR] npm install failed!
+            pause
+            exit /b 1
+        )
+    )
+    
+    echo Building application...
+    call npm run build
+    if %errorlevel% neq 0 (
+        echo [ERROR] Build failed!
+        pause
+        exit /b 1
+    )
+    
+    echo Preparing standalone files...
+    call node scripts\prepare-standalone.js
+    if %errorlevel% neq 0 (
+        echo [ERROR] Prepare standalone failed!
+        pause
+        exit /b 1
+    )
+)
+
+:: Verify server.js exists
+if not exist ".next\standalone\server.js" (
+    echo [ERROR] server.js not found after build!
+    echo Please try deleting .next folder and run again.
+    pause
+    exit /b 1
+)
+
+echo Starting server...
 echo.
 
-:: 设置环境变量
+:: Set environment variables
 set PORT=3000
 set HOSTNAME=localhost
 
-:: 在 standalone 目录启动服务器（后台运行）
-cd .next\standalone
+:: Start server in standalone directory
+cd /d "%~dp0.next\standalone"
 start /b node server.js
 
-:: 等待服务器启动
-echo 等待服务器就绪...
+:: Wait for server to be ready (using powershell for HTTP check)
+echo Waiting for server...
+set RETRY=0
 :wait_loop
+if %RETRY% geq 30 (
+    echo [ERROR] Server startup timeout!
+    pause
+    exit /b 1
+)
 timeout /t 1 /nobreak >nul
-curl -s http://localhost:3000 >nul 2>&1
+set /a RETRY=%RETRY%+1
+powershell -command "try { $r = Invoke-WebRequest -Uri 'http://localhost:3000' -UseBasicParsing -TimeoutSec 2; exit 0 } catch { exit 1 }" >nul 2>&1
 if %errorlevel% neq 0 goto wait_loop
 
 echo.
 echo ========================================
-echo   服务已启动！
-echo   访问地址: http://localhost:3000
+echo   Server is running!
+echo   URL: http://localhost:3000
 echo.
-echo   请勿关闭此窗口
-echo   按 Ctrl+C 可停止服务
+echo   Do NOT close this window.
+echo   Press any key to stop the server.
 echo ========================================
 echo.
 
-:: 打开浏览器
+:: Open browser
 start "" "http://localhost:3000"
 
-:: 保持窗口打开（等待用户按键退出）
-echo 服务运行中，按任意键停止服务...
+:: Keep window open
 pause >nul
 
-:: 结束 node 进程
+:: Kill node process for this server
 taskkill /f /im node.exe >nul 2>&1
-echo 服务已停止。
+echo Server stopped.
 timeout /t 2 >nul
